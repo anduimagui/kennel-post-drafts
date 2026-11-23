@@ -42,6 +42,44 @@ const platformLabel: Record<PostPlatform, string> = {
   newsletter: "Newsletter",
 }
 
+const platformDomain: Record<PostPlatform, string | undefined> = {
+  x: "x.com",
+  linkedin: "linkedin.com",
+  reddit: "reddit.com",
+  hackernews: "news.ycombinator.com",
+  mastodon: "mastodon.social",
+  bluesky: "bsky.app",
+  threads: "threads.net",
+  instagram: "instagram.com",
+  facebook: "facebook.com",
+  telegram: "telegram.org",
+  newsletter: undefined,
+}
+
+/** Small platform icon: the network's favicon, or a text badge without one. */
+function PlatformIcon({ platform }: { platform: PostPlatform }) {
+  const domain = platformDomain[platform]
+  if (!domain)
+    return (
+      <span
+        aria-label={platformLabel[platform]}
+        className="inline-flex size-4 items-center justify-center rounded border text-[9px] leading-none"
+        title={platformLabel[platform]}
+      >
+        ✉
+      </span>
+    )
+  return (
+    <img
+      alt={platformLabel[platform]}
+      className="inline size-4 rounded-sm align-text-bottom"
+      loading="lazy"
+      src={`https://icons.duckduckgo.com/ip3/${domain}.ico`}
+      title={platformLabel[platform]}
+    />
+  )
+}
+
 const statusStyle: Record<PostStatus, string> = {
   draft: "bg-yellow-100 text-yellow-800",
   scheduled: "bg-blue-100 text-blue-800",
@@ -152,7 +190,6 @@ function PostEditor({
   }
 
   const remove = async () => {
-    if (!window.confirm(`Delete post "${draft.id}" from posts.json?`)) return
     setSaving(true)
     setError(undefined)
     try {
@@ -330,7 +367,7 @@ function PostEditor({
             onClick={remove}
             type="button"
           >
-            Delete
+            {saving ? "Deleting…" : "Delete"}
           </button>
         ) : null}
       </footer>
@@ -340,20 +377,19 @@ function PostEditor({
 
 function PostCard({
   folder,
-  handle,
   platformOptions,
   post,
   onEdit,
   onDeleted,
 }: {
   folder: string
-  handle: string
   platformOptions: PostPlatform[]
   post: Post
   onEdit: () => void
   onDeleted: () => void
 }) {
   const [copied, setCopied] = useState(false)
+  const [error, setError] = useState<string>()
   const [deleting, setDeleting] = useState(false)
   const copy = async () => {
     await navigator.clipboard.writeText(post.body)
@@ -361,22 +397,31 @@ function PostCard({
     setTimeout(() => setCopied(false), 1500)
   }
   const remove = async () => {
-    if (!window.confirm(`Delete post "${post.id}" from posts.json?`)) return
     setDeleting(true)
-    const response = await fetch(
-      `/api/post-drafts/delete?path=${encodeURIComponent(folder)}`,
-      {
-        body: JSON.stringify({ id: post.id }),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-      },
-    )
-    setDeleting(false)
-    if (response.ok) onDeleted()
-    else
-      window.alert(
-        `Delete failed (${response.status}). Check the browser console for details.`,
+    setError(undefined)
+    try {
+      const response = await fetch(
+        `/api/post-drafts/delete?path=${encodeURIComponent(folder)}`,
+        {
+          body: JSON.stringify({ id: post.id }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        },
       )
+      if (!response.ok) {
+        const detail = (await response.json().catch(() => undefined)) as
+          | { error?: { message?: string } }
+          | undefined
+        throw new Error(
+          detail?.error?.message ?? `Delete failed (${response.status})`,
+        )
+      }
+      onDeleted()
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      setDeleting(false)
+    }
   }
   const pushTargets = (post.platforms?.length
     ? post.platforms.filter((platform) => platformOptions.includes(platform))
@@ -384,29 +429,26 @@ function PostCard({
   ).filter((platform) => intentUrl(platform, post))
   return (
     <article className="rounded-xl border bg-card p-4 shadow-sm">
-      <header className="flex items-center gap-3">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-sky-600 text-sm font-semibold text-white">
-          {(post.title ?? post.id)
-            .split(/\s+/)
-            .slice(0, 2)
-            .map((word) => word[0]?.toLocaleUpperCase())
-            .join("")}
+      <header className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1">
+          {(post.platforms ?? platformOptions).map((platform) => (
+            <PlatformIcon key={platform} platform={platform} />
+          ))}
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold">{post.title ?? post.id}</p>
-          <p className="truncate text-sm text-muted-foreground">@{handle}</p>
-        </div>
+        <p className="min-w-0 flex-1 truncate text-sm font-medium text-muted-foreground">
+          {post.title ?? post.id}
+        </p>
         <span
           className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${statusStyle[post.status ?? "draft"]}`}
         >
           {post.status ?? "draft"}
         </span>
       </header>
-      <div className="mt-3">
+      <div className="mt-2">
         <PostBody text={post.body} />
       </div>
       {post.hashtags?.length ? (
-        <div className="mt-3 flex flex-wrap gap-1.5">
+        <div className="mt-2 flex flex-wrap gap-1.5">
           {post.hashtags.map((tag) => (
             <span
               className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-sky-700"
@@ -418,19 +460,11 @@ function PostCard({
         </div>
       ) : null}
       {post.notes ? (
-        <p className="mt-3 text-sm text-muted-foreground">{post.notes}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{post.notes}</p>
       ) : null}
-      <footer className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3 text-sm text-muted-foreground">
-        {post.platforms?.length ? (
-          <span className="text-xs">
-            {post.platforms
-              ?.map((platform) => platformLabel[platform])
-              .join(" · ")}
-          </span>
-        ) : null}
+      <footer className="mt-2 flex flex-wrap items-center gap-2 border-t pt-2 text-sm text-muted-foreground">
         {post.scheduledFor ? (
           <span className="text-xs">
-            Scheduled for{" "}
             {new Date(post.scheduledFor).toLocaleString(undefined, {
               dateStyle: "medium",
               timeStyle: "short",
@@ -450,38 +484,46 @@ function PostCard({
         <span className="ml-auto" />
         {pushTargets.map((platform) => (
           <a
-            className="rounded-md border px-2.5 py-1 text-xs hover:bg-muted"
+            aria-label={`Push to ${platformLabel[platform]}`}
+            className="rounded-md border p-1 hover:bg-muted"
             href={intentUrl(platform, post)}
             key={platform}
             rel="noreferrer"
             target="_blank"
+            title={`Push to ${platformLabel[platform]}`}
           >
-            Push to {platformLabel[platform]}
+            <PlatformIcon platform={platform} />
           </a>
         ))}
         <button
-          className="rounded-md border px-2.5 py-1 text-xs hover:bg-muted"
+          className="rounded-md border px-2 py-1 text-xs hover:bg-muted"
           onClick={copy}
           type="button"
         >
-          {copied ? "Copied" : "Copy text"}
+          {copied ? "Copied" : "Copy"}
         </button>
         <button
-          className="rounded-md border px-2.5 py-1 text-xs hover:bg-muted"
+          className="rounded-md border px-2 py-1 text-xs hover:bg-muted"
           onClick={onEdit}
           type="button"
         >
           Edit
         </button>
         <button
-          className="rounded-md border border-red-300 px-2.5 py-1 text-xs text-red-600 hover:bg-red-50"
+          aria-label="Delete post"
+          className="rounded-md border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
           disabled={deleting}
           onClick={remove}
           type="button"
         >
-          {deleting ? "Deleting…" : "Delete"}
+          {deleting ? "…" : "Delete"}
         </button>
       </footer>
+      {error ? (
+        <p className="mt-2 text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      ) : null}
     </article>
   )
 }
@@ -510,22 +552,18 @@ export default function PostDraftsPage(props: FolderPluginViewProps) {
       ? (payload.message ?? "Invalid post drafts data.")
       : undefined
 
-  const handle = (() => {
-    const base = props.folder.split("/").filter(Boolean).pop()
-    return (base ?? "folder").toLocaleLowerCase().replace(/\s+/g, "")
-  })()
-
   // Configured networks come from posts.json `platforms`; fall back to
   // every network used by a post in this file.
   const platformOptions =
-    data?.dataset.platforms?.length ? data.dataset.platforms
-    : data?.dataset.posts.some((post) => post.platforms?.length)
-      ? [
-          ...new Set(
-            data.dataset.posts.flatMap((post) => post.platforms ?? []),
-          ),
-        ].filter((platform) => allPlatforms.includes(platform))
-    : allPlatforms
+    data?.dataset.platforms?.length
+      ? data.dataset.platforms
+      : data?.dataset.posts.some((post) => post.platforms?.length)
+        ? [
+            ...new Set(
+              data.dataset.posts.flatMap((post) => post.platforms ?? []),
+            ),
+          ].filter((platform) => allPlatforms.includes(platform))
+        : allPlatforms
 
   const posts =
     data?.dataset.posts.filter(
@@ -644,7 +682,6 @@ export default function PostDraftsPage(props: FolderPluginViewProps) {
               {posts.map((post) => (
                 <PostCard
                   folder={props.folder}
-                  handle={handle}
                   key={post.id}
                   onDeleted={refresh}
                   onEdit={() =>
