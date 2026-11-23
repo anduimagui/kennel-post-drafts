@@ -96,6 +96,7 @@ export function createPostDraftsPlugin() {
       if (!document) return { kind: "unavailable" }
       const dataset: PostDraftsDataset = {
         topic: document.topic,
+        platforms: document.platforms,
         posts: [...document.posts].sort((a, b) => a.id.localeCompare(b.id)),
       }
       return {

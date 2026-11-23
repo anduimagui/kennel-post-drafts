@@ -25,5 +25,13 @@ export type Post = {
   notes?: string
 }
 
-export type PostDraftsFile = { topic?: string; posts: Post[] }
-export type PostDraftsDataset = { topic?: string; posts: Post[] }
+export type PostDraftsFile = {
+  topic?: string
+  platforms?: PostPlatform[]
+  posts: Post[]
+}
+export type PostDraftsDataset = {
+  topic?: string
+  platforms?: PostPlatform[]
+  posts: Post[]
+}

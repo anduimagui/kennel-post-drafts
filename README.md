@@ -3,13 +3,19 @@
 A Kennel plugin for draft social media posts. It discovers a `posts.json`
 document in the current folder and renders its posts as social-media-style
 cards in the Kennel viewer, with status and platform filters and copy-to-
-clipboard for each draft.
+clipboard for each draft. Each card also has Edit (an inline form that saves
+back to `posts.json` through `POST /api/post-drafts/save`), Delete
+(`POST /api/post-drafts/delete`), and "Push to" web-intent buttons that open
+the compose screen for X, Bluesky, Threads, Mastodon, LinkedIn, Reddit,
+Hacker News, Telegram, and Facebook.
 
 Each post draft targets one or more networks (X, LinkedIn, Reddit, Hacker
 News, Mastodon, Bluesky, Threads, Instagram, Facebook, Telegram, newsletter)
-and moves through a `draft` → `scheduled` → `posted` life cycle. The bundled
-agent skill (`SKILL.md`) teaches coding agents to add new drafts to
-`posts.json` from the current discussion.
+and moves through a `draft` → `scheduled` → `posted` life cycle. The
+optional document-level `platforms` array configures which networks the
+viewer shows in its platform filter and push buttons. The bundled agent
+skill (`SKILL.md`) teaches coding agents to add new drafts to `posts.json`
+from the current discussion.
 
 ## Install
 
@@ -37,6 +43,7 @@ kennel init --plugin post-drafts
 {
   "$schema": "https://raw.githubusercontent.com/anduimagui/kennel-post-drafts/main/schema.json",
   "topic": "My product launch",
+  "platforms": ["x", "linkedin"],
   "posts": [
     {
       "id": "launch-announcement",

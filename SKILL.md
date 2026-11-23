@@ -23,6 +23,17 @@ launch, a write-up, a service, an idea — draft social media posts for it:
 5. Set `status` to `draft` unless the user schedules or posts it. Record
    `scheduledFor` and `postedUrl` when known.
 
+Set the document's root `platforms` array to the networks the user wants to
+post to (for example `["x", "linkedin"]`). The viewer uses that list for its
+platform filter and for the "Push to" buttons on each card. Keep it in sync
+with what the user asks for.
+
+The viewer edits `posts.json` directly: each card has Edit (saves the whole
+post back through `POST /api/post-drafts/save`) and Delete
+(`POST /api/post-drafts/delete`). When asked to fix or clean up a post,
+prefer editing the file the same way the UI does: replace or remove the array
+item by its stable `id` and keep the document valid.
+
 If `posts.json` does not exist, create it with the `$schema` field set to the
 schema URL below, a `topic` naming the subject being promoted, and a `posts`
 array.

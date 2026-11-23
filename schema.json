@@ -12,6 +12,12 @@
       "$ref": "#/$defs/text",
       "description": "The subject these drafts promote, such as a product, launch, or idea."
     },
+    "platforms": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/platform" },
+      "description": "The networks you want to post to. The viewer shows these in its filters and push buttons."
+    },
     "posts": { "type": "array", "items": { "$ref": "#/$defs/post" } }
   },
   "$defs": {
