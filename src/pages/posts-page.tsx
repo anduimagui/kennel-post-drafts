@@ -104,7 +104,11 @@ function intentUrl(platform: PostPlatform, post: Post): string | undefined {
     case "mastodon":
       return `https://mastodon.social/share?text=${text}`
     case "linkedin":
-      return "https://www.linkedin.com/sharing/share-offsite/"
+      // share-offsite accepts a URL only; the text cannot be pre-filled.
+      // The push handler copies the draft text before opening this.
+      return url
+        ? `https://www.linkedin.com/sharing/share-offsite/?url=${url}`
+        : "https://www.linkedin.com/feed/?shareActive=true"
     case "reddit":
       return `https://www.reddit.com/submit?title=${title}&text=${text}`
     case "hackernews":
@@ -396,6 +400,15 @@ function PostCard({
     setCopied(true)
     setTimeout(() => setCopied(false), 1500)
   }
+  /** Open the network's composer with the draft text already copied. */
+  const pushTo = async (platform: PostPlatform) => {
+    const target = intentUrl(platform, post)
+    if (!target) return
+    await navigator.clipboard.writeText(post.body)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
+    window.open(target, "_blank", "noopener,noreferrer")
+  }
   const remove = async () => {
     setDeleting(true)
     setError(undefined)
@@ -483,17 +496,16 @@ function PostCard({
         ) : null}
         <span className="ml-auto" />
         {pushTargets.map((platform) => (
-          <a
+          <button
             aria-label={`Push to ${platformLabel[platform]}`}
             className="rounded-md border p-1 hover:bg-muted"
-            href={intentUrl(platform, post)}
             key={platform}
-            rel="noreferrer"
-            target="_blank"
+            onClick={() => pushTo(platform)}
             title={`Push to ${platformLabel[platform]}`}
+            type="button"
           >
             <PlatformIcon platform={platform} />
-          </a>
+          </button>
         ))}
         <button
           className="rounded-md border px-2 py-1 text-xs hover:bg-muted"
