@@ -5,9 +5,16 @@ document in the current folder and renders its posts as social-media-style
 cards in the Kennel viewer, with status and platform filters and copy-to-
 clipboard for each draft. Each card also has Edit (an inline form that saves
 back to `posts.json` through `POST /api/post-drafts/save`), Delete
-(`POST /api/post-drafts/delete`), and "Push to" web-intent buttons that open
+(`POST /api/post-drafts/delete`), Send (creates a Post Bridge post for picked
+connected accounts through `POST /api/post-drafts/send`, recording the
+`postbridgeId` and setting status to `scheduled` or `posted`), and "Push to"
+web-intent buttons that open
 the compose screen for X, Bluesky, Threads, Mastodon, LinkedIn, Reddit,
 Hacker News, Telegram, and Facebook.
+
+Sending needs the Kennel service started with `POST_BRIDGE_API_KEY` set; run
+it through Deadbolt, for example
+`deadbolt run --env POST_BRIDGE_API_KEY=deadbolt://e30d/credential -- kennel serve <folder>`.
 
 Each post draft targets one or more networks (X, LinkedIn, Reddit, Hacker
 News, Mastodon, Bluesky, Threads, Instagram, Facebook, Telegram, newsletter)

@@ -22,6 +22,7 @@ export type Post = {
   status?: PostStatus
   scheduledFor?: string
   postedUrl?: string
+  postbridgeId?: string
   notes?: string
 }
 

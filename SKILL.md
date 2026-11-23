@@ -34,6 +34,12 @@ post back through `POST /api/post-drafts/save`) and Delete
 prefer editing the file the same way the UI does: replace or remove the array
 item by its stable `id` and keep the document valid.
 
+The viewer can also send posts through the Post Bridge API
+(`POST /api/post-drafts/send`), which sets `postbridgeId` and moves `status`
+to `scheduled` or `posted`. This needs the Kennel service started with
+`POST_BRIDGE_API_KEY` set (Deadbolt item `e30d`, field `credential`).
+Never send or schedule a post without the user's explicit approval.
+
 If `posts.json` does not exist, create it with the `$schema` field set to the
 schema URL below, a `topic` naming the subject being promoted, and a `posts`
 array.

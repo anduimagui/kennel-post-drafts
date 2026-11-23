@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import type {
   FolderPluginDataset,
@@ -139,6 +139,23 @@ function PostBody({ text }: { text: string }) {
       )}
     </p>
   )
+}
+
+type PostBridgeAccount = {
+  id: number
+  platform: string
+  username?: string
+  needs_reconnect?: boolean
+}
+
+/** Our platform enum to Post Bridge's platform names. */
+const postBridgePlatform: Partial<Record<PostPlatform, string>> = {
+  x: "twitter",
+  linkedin: "linkedin",
+  bluesky: "bluesky",
+  threads: "threads",
+  instagram: "instagram",
+  facebook: "facebook",
 }
 
 const inputClass =
@@ -395,6 +412,72 @@ function PostCard({
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string>()
   const [deleting, setDeleting] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [selected, setSelected] = useState<number[]>([])
+  const [sendError, setSendError] = useState<string>()
+  const [sending, setSending] = useState(false)
+  const accounts = useQuery({
+    enabled: pickerOpen,
+    queryFn: async ({ signal }) => {
+      const answer = await fetch("/api/post-drafts/accounts", { signal })
+      if (!answer.ok)
+        throw new Error(`Could not load accounts (${answer.status})`)
+      const document = (await answer.json()) as { accounts?: PostBridgeAccount[] }
+      return document.accounts ?? []
+    },
+    queryKey: ["post-drafts-accounts"],
+  })
+  // Pre-check the accounts whose platform matches this post's platforms.
+  const preselected = useMemo(() => {
+    const platforms = new Set(
+      (post.platforms ?? []).flatMap(
+        (platform) =>
+          postBridgePlatform[platform] ? [postBridgePlatform[platform]!] : [],
+      ),
+    )
+    return (accounts.data ?? [])
+      .filter(
+        (account) =>
+          !account.needs_reconnect &&
+          (platforms.size === 0 || platforms.has(account.platform)),
+      )
+      .map((account) => account.id)
+  }, [accounts.data, post.platforms])
+  const checked = selected.length ? selected : preselected
+  const toggle = (id: number, on: boolean) =>
+    setSelected((current) => {
+      const base = current.length ? current : preselected
+      return on ? [...new Set([...base, id])] : base.filter((item) => item !== id)
+    })
+
+  const send = async () => {
+    setSending(true)
+    setSendError(undefined)
+    try {
+      const response = await fetch(
+        `/api/post-drafts/send?path=${encodeURIComponent(folder)}`,
+        {
+          body: JSON.stringify({ accounts: checked, id: post.id }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
+        },
+      )
+      if (!response.ok) {
+        const detail = (await response.json().catch(() => undefined)) as
+          | { error?: { message?: string } }
+          | undefined
+        throw new Error(
+          detail?.error?.message ?? `Send failed (${response.status})`,
+        )
+      }
+      onDeleted() // refresh: the card now shows scheduled/posted
+    } catch (cause) {
+      setSendError(cause instanceof Error ? cause.message : String(cause))
+    } finally {
+      setSending(false)
+    }
+  }
+
   const copy = async () => {
     await navigator.clipboard.writeText(post.body)
     setCopied(true)
@@ -475,6 +558,78 @@ function PostCard({
       {post.notes ? (
         <p className="mt-2 text-sm text-muted-foreground">{post.notes}</p>
       ) : null}
+      {pickerOpen ? (
+        <div className="mt-2 rounded-lg border bg-muted/40 p-3 text-sm">
+          <p className="mb-2 font-medium">
+            Send through Post Bridge
+            {post.scheduledFor ? " (scheduled)" : " (now)"}
+          </p>
+          {accounts.isPending ? <p>Loading accounts…</p> : null}
+          {accounts.error ? (
+            <p className="text-sm text-red-600" role="alert">
+              {String(accounts.error)}
+            </p>
+          ) : null}
+          {accounts.data ? (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {accounts.data.map((account) => (
+                  <label
+                    className={`flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs ${
+                      checked.includes(account.id)
+                        ? "border-sky-500 bg-sky-50"
+                        : ""
+                    } ${account.needs_reconnect ? "opacity-50" : ""}`}
+                    key={account.id}
+                  >
+                    <input
+                      checked={checked.includes(account.id)}
+                      onChange={(event) =>
+                        toggle(account.id, event.target.checked)
+                      }
+                      type="checkbox"
+                    />
+                    {account.platform}
+                    {account.username ? ` · ${account.username}` : ""}
+                    {account.needs_reconnect ? " · needs reconnect" : ""}
+                  </label>
+                ))}
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  className="rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-700 disabled:opacity-50"
+                  disabled={sending || !checked.length}
+                  onClick={send}
+                  type="button"
+                >
+                  {sending
+                    ? "Sending…"
+                    : post.scheduledFor
+                      ? "Schedule through Post Bridge"
+                      : "Send now through Post Bridge"}
+                </button>
+                <button
+                  className="rounded-md border px-3 py-1.5 text-xs hover:bg-muted"
+                  onClick={() => setPickerOpen(false)}
+                  type="button"
+                >
+                  Cancel
+                </button>
+                <span className="text-xs text-muted-foreground">
+                  {post.scheduledFor
+                    ? `Publishes at ${new Date(post.scheduledFor).toLocaleString()}`
+                    : "Publishes immediately"}
+                </span>
+              </div>
+            </>
+          ) : null}
+          {sendError ? (
+            <p className="mt-2 text-sm text-red-600" role="alert">
+              {sendError}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       <footer className="mt-2 flex flex-wrap items-center gap-2 border-t pt-2 text-sm text-muted-foreground">
         {post.scheduledFor ? (
           <span className="text-xs">
@@ -507,6 +662,13 @@ function PostCard({
             <PlatformIcon platform={platform} />
           </button>
         ))}
+        <button
+          className="rounded-md border px-2 py-1 text-xs hover:bg-muted"
+          onClick={() => setPickerOpen((open) => !open)}
+          type="button"
+        >
+          Send
+        </button>
         <button
           className="rounded-md border px-2 py-1 text-xs hover:bg-muted"
           onClick={copy}

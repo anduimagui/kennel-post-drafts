@@ -86,6 +86,10 @@
           "$ref": "#/$defs/url",
           "description": "Link to the published post."
         },
+        "postbridgeId": {
+          "type": "string",
+          "description": "Post Bridge post id, set when this draft was sent through the Post Bridge API."
+        },
         "notes": {
           "$ref": "#/$defs/text",
           "description": "Context, audience, or follow-up notes."
