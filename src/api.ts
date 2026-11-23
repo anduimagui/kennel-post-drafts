@@ -137,19 +137,19 @@ const sendRoute: ApiRouteSpec<RouteContext> = {
       method: "POST",
     })
     const created = (await answer.json().catch(() => undefined)) as
-      | { data?: Record<string, unknown>; error?: unknown }
+      | Record<string, unknown>
       | undefined
     if (!answer.ok) {
+      const rawError = created?.error ?? created ?? {}
       const message =
-        typeof created?.error === "string"
-          ? created.error
-          : JSON.stringify(created?.error ?? created ?? {})
+        typeof rawError === "string" ? rawError : JSON.stringify(rawError)
       throw apiError(
         "failed",
         `Post Bridge refused the post (${answer.status}): ${message.slice(0, 300)}`,
       )
     }
-    const data = created?.data ?? {}
+    const data: Record<string, unknown> =
+      (created?.data as Record<string, unknown> | undefined) ?? created ?? {}
     const postbridgeId = String(data.id ?? "")
     const status: PostStatus = scheduledAt ? "scheduled" : "posted"
     const posts = document.posts.map((item) =>
