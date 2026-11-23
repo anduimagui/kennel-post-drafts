@@ -1,0 +1,23 @@
+{
+  "$schema": "https://raggle.co/kennel/plugin.json",
+  "plugin": {
+    "id": "post-drafts",
+    "label": "Post Drafts",
+    "description": "Draft social media posts for promoting work, products, or ideas, from posts.json files.",
+    "icon": {
+      "paths": [
+        "m3 11 18-5v12L3 14v-3z",
+        "M11.6 16.8a3 3 0 1 1-5.8-1.6"
+      ]
+    },
+    "trigger": "posts.json",
+    "views": [
+      {
+        "subpath": "",
+        "label": "Post Drafts",
+        "component": "PostDraftsPage"
+      }
+    ],
+    "skill": "SKILL.md"
+  }
+}

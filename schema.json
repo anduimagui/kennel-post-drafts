@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/anduimagui/kennel-post-drafts/main/schema.json",
+  "title": "Post Drafts",
+  "description": "Draft social media posts for promoting work, products, or ideas discussed in this folder.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["posts"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "topic": {
+      "$ref": "#/$defs/text",
+      "description": "The subject these drafts promote, such as a product, launch, or idea."
+    },
+    "posts": { "type": "array", "items": { "$ref": "#/$defs/post" } }
+  },
+  "$defs": {
+    "text": { "type": "string", "minLength": 1, "pattern": "\\S" },
+    "id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "platform": {
+      "enum": [
+        "x",
+        "linkedin",
+        "reddit",
+        "hackernews",
+        "mastodon",
+        "bluesky",
+        "threads",
+        "instagram",
+        "facebook",
+        "telegram",
+        "newsletter"
+      ],
+      "description": "Network this draft targets."
+    },
+    "status": {
+      "enum": ["draft", "scheduled", "posted"],
+      "description": "Where this draft is in its life cycle."
+    },
+    "url": { "type": "string", "pattern": "^https?://\\S+$" },
+    "post": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "body"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id",
+          "description": "Stable identifier, unique within this file."
+        },
+        "title": {
+          "$ref": "#/$defs/text",
+          "description": "Short working title for the draft."
+        },
+        "platforms": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/platform" },
+          "description": "Networks this draft targets."
+        },
+        "body": {
+          "$ref": "#/$defs/text",
+          "description": "Ready-to-post text, including any hashtags or mentions."
+        },
+        "hashtags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/text" },
+          "description": "Topic tags for this draft, without the # prefix."
+        },
+        "status": {
+          "$ref": "#/$defs/status",
+          "default": "draft"
+        },
+        "scheduledFor": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}",
+          "description": "Planned posting time, as an ISO date-time."
+        },
+        "postedUrl": {
+          "$ref": "#/$defs/url",
+          "description": "Link to the published post."
+        },
+        "notes": {
+          "$ref": "#/$defs/text",
+          "description": "Context, audience, or follow-up notes."
+        }
+      }
+    }
+  }
+}

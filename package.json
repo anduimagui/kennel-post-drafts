@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "kennel-post-drafts",
+  "version": "0.1.0",
+  "description": "Draft social media posts for Kennel folders, rendered from posts.json.",
+  "type": "module",
+  "license": "MIT",
+  "prettier": {
+    "semi": false,
+    "trailingComma": "all"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anduimagui/kennel-post-drafts.git"
+  },
+  "files": [
+    "kennel.json",
+    "src",
+    "schema.json"
+  ],
+  "scripts": {
+    "schema:build": "bun scripts/validator.mjs",
+    "schema:check": "bun scripts/validator.mjs --check",
+    "typecheck": "tsc --noEmit",
+    "pack:check": "npm pack --dry-run"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.66.5"
+  },
+  "peerDependencies": {
+    "kennel-plugins": "^0.1.2",
+    "react": ">=18.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "@types/react": "19.1.10",
+    "ajv": "^8.17.1",
+    "esbuild": "0.25.12",
+    "kennel-plugins": "^0.1.2",
+    "react": "19.1.0",
+    "typescript": "^5.9.3"
+  }
+}
